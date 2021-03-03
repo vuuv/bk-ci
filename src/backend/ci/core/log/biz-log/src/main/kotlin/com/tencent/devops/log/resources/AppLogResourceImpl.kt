@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -146,6 +147,32 @@ class AppLogResourceImpl @Autowired constructor(
         )
     }
 
+    override fun getBeforeLogs(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        end: Long,
+        size: Int?,
+        tag: String?,
+        subTag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.getBeforeLogs(
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            end = end,
+            size = size,
+            tag = tag,
+            subTag = subTag,
+            jobId = jobId,
+            executeCount = executeCount
+        )
+    }
+
     override fun downloadLogs(
         userId: String,
         projectId: String,
@@ -169,7 +196,7 @@ class AppLogResourceImpl @Autowired constructor(
         )
     }
 
-    override fun getEndLogs(
+    override fun getEndLogsPage(
         userId: String,
         projectId: String,
         pipelineId: String,
@@ -181,7 +208,32 @@ class AppLogResourceImpl @Autowired constructor(
         executeCount: Int?
     ): Result<EndPageQueryLogs> {
         validateAuth(userId, projectId, pipelineId, buildId)
-        return logDispatcher.getEndLogs(
+        return logDispatcher.getEndLogsPage(
+            userId = userId,
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            size = size,
+            tag = tag,
+            subTag = subTag,
+            jobId = jobId,
+            executeCount = executeCount
+        )
+    }
+
+    override fun getBottomLogs(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        size: Int?,
+        tag: String?,
+        subTag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.getBottomLogs(
             userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,

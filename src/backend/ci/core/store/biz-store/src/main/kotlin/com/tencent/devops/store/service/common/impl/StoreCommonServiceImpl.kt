@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -26,10 +27,8 @@
 
 package com.tencent.devops.store.service.common.impl
 
-import com.tencent.devops.common.api.constant.FAIL
 import com.tencent.devops.common.api.constant.INIT_VERSION
 import com.tencent.devops.common.api.constant.SUCCESS
-import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.store.configuration.StoreDetailUrlConfig
 import com.tencent.devops.store.dao.common.AbstractStoreCommonDao
@@ -66,6 +65,7 @@ import org.springframework.stereotype.Service
  * store公共
  * since: 2019-07-23
  */
+@Suppress("ALL")
 @Service
 class StoreCommonServiceImpl @Autowired constructor(
     private val dslContext: DSLContext,
@@ -149,7 +149,6 @@ class StoreCommonServiceImpl @Autowired constructor(
                     item.status = SUCCESS
                 } else {
                     item.status = status
-                    item.name += if (status == FAIL) MessageCodeUtil.getCodeLanMessage(FAIL) else ""
                 }
             }
         }
@@ -201,6 +200,7 @@ class StoreCommonServiceImpl @Autowired constructor(
             StoreTypeEnum.TEMPLATE -> "${storeDetailUrlConfig.templateDetailBaseUrl}$storeCode"
             StoreTypeEnum.IMAGE -> "${storeDetailUrlConfig.imageDetailBaseUrl}$storeCode"
             StoreTypeEnum.IDE_ATOM -> "${storeDetailUrlConfig.ideAtomDetailBaseUrl}$storeCode"
+            StoreTypeEnum.SERVICE -> "${storeDetailUrlConfig.serviceDetailBaseUrl}$storeCode"
             else -> ""
         }
         logger.info("getStoreDetailUrl url is :$url")

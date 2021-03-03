@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -44,11 +45,13 @@ import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.repository.service.scm.IGitService
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitTag
+import com.tencent.devops.scm.pojo.GitCommit
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import org.springframework.beans.factory.annotation.Autowired
 import javax.servlet.http.HttpServletResponse
 
 @RestResource
+@Suppress("ALL")
 class ServiceGitResourceImpl @Autowired constructor(
     private val gitService: IGitService
 ) : ServiceGitResource {
@@ -75,15 +78,32 @@ class ServiceGitResourceImpl @Autowired constructor(
         return Result(gitService.getProject(accessToken, userId))
     }
 
-    override fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): Result<List<Project>> {
+    override fun getProjectList(
+        accessToken: String,
+        userId: String,
+        page: Int?,
+        pageSize: Int?
+    ): Result<List<Project>> {
         return Result(gitService.getProjectList(accessToken, userId, page, pageSize))
     }
 
-    override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitBranch>> {
+    override fun getBranch(
+        accessToken: String,
+        userId: String,
+        repository: String,
+        page: Int?,
+        pageSize: Int?
+    ): Result<List<GitBranch>> {
         return Result(gitService.getBranch(userId, accessToken, repository, page, pageSize))
     }
 
-    override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitTag>> {
+    override fun getTag(
+        accessToken: String,
+        userId: String,
+        repository: String,
+        page: Int?,
+        pageSize: Int?
+    ): Result<List<GitTag>> {
         return Result(gitService.getTag(accessToken, userId, repository, page, pageSize))
     }
 
@@ -234,5 +254,27 @@ class ServiceGitResourceImpl @Autowired constructor(
                 repoUrl = repoUrl
             )
         )
+    }
+
+    override fun getRepoRecentCommitInfo(
+        repoName: String,
+        sha: String,
+        token: String,
+        tokenType: TokenTypeEnum
+    ): Result<GitCommit?> {
+        return gitService.getRepoRecentCommitInfo(repoName = repoName, sha = sha, token = token, tokenType = tokenType)
+    }
+
+    override fun unLockHookLock(
+        projectId: String?,
+        repoName: String,
+        mrId: Long
+    ): Result<Boolean> {
+        gitService.unlockHookLock(
+            projectId = projectId,
+            repoName = repoName,
+            mrId = mrId
+        )
+        return Result(true)
     }
 }

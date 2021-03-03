@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -36,6 +37,7 @@ import com.tencent.devops.common.log.pojo.QueryLogs
 import org.slf4j.LoggerFactory
 import javax.ws.rs.core.Response
 
+@Suppress("ALL")
 interface LogService {
 
     companion object {
@@ -60,7 +62,7 @@ interface LogService {
         executeCount: Int?
     ): QueryLogs
 
-    fun queryMoreLogsBetweenLines(
+    fun queryLogsBetweenLines(
         buildId: String,
         num: Int,
         fromStart: Boolean,
@@ -81,6 +83,16 @@ interface LogService {
         executeCount: Int?
     ): QueryLogs
 
+    fun queryLogsBeforeLine(
+        buildId: String,
+        end: Long,
+        size: Int?,
+        tag: String? = null,
+        subTag: String? = null,
+        jobId: String? = null,
+        executeCount: Int?
+    ): QueryLogs
+
     fun downloadLogs(
         pipelineId: String,
         buildId: String,
@@ -91,7 +103,7 @@ interface LogService {
         fileName: String?
     ): Response
 
-    fun getEndLogs(
+    fun getEndLogsPage(
         pipelineId: String,
         buildId: String,
         tag: String?,
@@ -100,6 +112,16 @@ interface LogService {
         executeCount: Int?,
         size: Int
     ): EndPageQueryLogs
+
+    fun getBottomLogs(
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        subTag: String?,
+        jobId: String?,
+        executeCount: Int?,
+        size: Int?
+    ): QueryLogs
 
     fun queryInitLogsPage(
         buildId: String,

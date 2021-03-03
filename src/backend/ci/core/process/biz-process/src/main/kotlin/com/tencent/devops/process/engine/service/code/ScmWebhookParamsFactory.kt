@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -26,6 +27,7 @@
 
 package com.tencent.devops.process.engine.service.code
 
+import com.tencent.devops.common.api.util.EmojiUtil
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitGenericWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitWebHookTriggerElement
@@ -34,6 +36,7 @@ import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitlabWebHook
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeSVNWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeTGitWebHookTriggerElement
 import com.tencent.devops.process.pojo.code.ScmWebhookMatcher
+import com.tencent.devops.process.utils.PIPELINE_BUILD_MSG
 import com.tencent.devops.process.utils.PIPELINE_REPO_NAME
 import com.tencent.devops.process.utils.PIPELINE_START_TASK_ID
 import com.tencent.devops.process.utils.PIPELINE_START_WEBHOOK_USER_ID
@@ -41,6 +44,7 @@ import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_BLOCK
 import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_BRANCH
 import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_COMMIT_MESSAGE
 import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_EVENT_TYPE
+import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_QUEUE
 import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_REPO
 import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_REPO_TYPE
 import com.tencent.devops.process.utils.PIPELINE_WEBHOOK_REVISION
@@ -97,6 +101,7 @@ object ScmWebhookParamsFactory {
         }
     }
 
+    @Suppress("ALL")
     fun getStartParams(
         projectId: String,
         element: Element,
@@ -111,6 +116,7 @@ object ScmWebhookParamsFactory {
         return startParams
     }
 
+    @Suppress("ALL")
     private fun getElementStartParams(
         element: Element,
         matcher: ScmWebhookMatcher,
@@ -163,6 +169,7 @@ object ScmWebhookParamsFactory {
         }
     }
 
+    @Suppress("ALL")
     private fun getCommonStartParams(
         matcher: ScmWebhookMatcher,
         element: Element,
@@ -208,6 +215,10 @@ object ScmWebhookParamsFactory {
         startParams[BK_REPO_WEBHOOK_REPO_NAME] = repo.projectName
         startParams[BK_REPO_WEBHOOK_REPO_ALIAS_NAME] = repo.aliasName
         startParams[BK_REPO_WEBHOOK_HASH_ID] = repo.repoHashId ?: ""
+        startParams[PIPELINE_BUILD_MSG] = EmojiUtil.removeAllEmoji(
+            startParams[PIPELINE_WEBHOOK_COMMIT_MESSAGE] as String? ?: "代码库触发"
+        )
+        startParams[PIPELINE_WEBHOOK_QUEUE] = params.webhookQueue
         return startParams
     }
 }

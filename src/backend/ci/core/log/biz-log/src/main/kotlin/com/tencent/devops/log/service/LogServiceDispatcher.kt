@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response
 
 @Service
+@Suppress("ALL")
 class LogServiceDispatcher @Autowired constructor(
     private val logService: LogService
 ) {
@@ -106,7 +108,7 @@ class LogServiceDispatcher @Autowired constructor(
         subTag: String? = null
     ): Result<QueryLogs> {
         return Result(
-            logService.queryMoreLogsBetweenLines(
+            logService.queryLogsBetweenLines(
                 buildId = buildId,
                 num = num ?: 100,
                 fromStart = fromStart ?: true,
@@ -144,6 +146,30 @@ class LogServiceDispatcher @Autowired constructor(
         )
     }
 
+    fun getBeforeLogs(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        end: Long,
+        size: Int?,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?,
+        subTag: String? = null
+    ): Result<QueryLogs> {
+        return Result(
+            logService.queryLogsBeforeLine(
+                buildId = buildId,
+                end = end,
+                size = size,
+                tag = tag,
+                subTag = subTag,
+                jobId = jobId,
+                executeCount = executeCount
+            )
+        )
+    }
+
     fun downloadLogs(
         projectId: String,
         pipelineId: String,
@@ -165,7 +191,7 @@ class LogServiceDispatcher @Autowired constructor(
         )
     }
 
-    fun getEndLogs(
+    fun getEndLogsPage(
         userId: String,
         projectId: String,
         pipelineId: String,
@@ -176,14 +202,36 @@ class LogServiceDispatcher @Autowired constructor(
         executeCount: Int?,
         subTag: String? = null
     ): Result<EndPageQueryLogs> {
-        return Result(logService.getEndLogs(
-            pipelineId,
-            buildId,
-            tag,
-            subTag,
-            jobId,
-            executeCount,
-            size
+        return Result(logService.getEndLogsPage(
+            pipelineId = pipelineId,
+            buildId = buildId,
+            tag = tag,
+            subTag = subTag,
+            jobId = jobId,
+            executeCount = executeCount,
+            size = size
+        ))
+    }
+
+    fun getBottomLogs(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        size: Int?,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?,
+        subTag: String? = null
+    ): Result<QueryLogs> {
+        return Result(logService.getBottomLogs(
+            pipelineId = pipelineId,
+            buildId = buildId,
+            tag = tag,
+            subTag = subTag,
+            jobId = jobId,
+            executeCount = executeCount,
+            size = size
         ))
     }
 }

@@ -10,12 +10,13 @@
  *
  * Terms of the MIT License:
  * ---------------------------------------------------
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
  * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
@@ -80,7 +81,6 @@ class LogServiceLuceneImpl constructor(
     }
 
     override fun addLogEvent(event: LogEvent) {
-        startLog(event.buildId)
         val logMessage = addLineNo(event.buildId, event.logs)
         if (logMessage.isNotEmpty()) {
             logMQEventDispatcher.dispatch(LogBatchEvent(event.buildId, logMessage))
@@ -91,6 +91,7 @@ class LogServiceLuceneImpl constructor(
         val currentEpoch = System.currentTimeMillis()
         var success = false
         try {
+            prepareIndex(event.buildId)
             val logMessages = event.logs
             val buf = mutableListOf<LogMessageWithLineNo>()
             logMessages.forEach {
@@ -104,7 +105,7 @@ class LogServiceLuceneImpl constructor(
             success = true
         } finally {
             val elapse = System.currentTimeMillis() - currentEpoch
-            logBeanV2.execute(elapse, success)
+            logBeanV2.batchWrite(elapse, success)
         }
     }
 
@@ -150,7 +151,7 @@ class LogServiceLuceneImpl constructor(
         }
     }
 
-    override fun queryMoreLogsBetweenLines(
+    override fun queryLogsBetweenLines(
         buildId: String,
         num: Int,
         fromStart: Boolean,
@@ -179,7 +180,7 @@ class LogServiceLuceneImpl constructor(
                     subTag = subTag,
                     jobId = jobId,
                     executeCount = executeCount,
-                    end = end,
+                    before = end,
                     start = start,
                     size = null
                 )
@@ -209,7 +210,7 @@ class LogServiceLuceneImpl constructor(
         var success = false
         try {
             val index = indexService.getIndexName(buildId)
-            val result = doQueryLargeLogsAfterLine(
+            val result = doQueryLogsAfterLine(
                 buildId = buildId,
                 index = index,
                 start = start,
@@ -217,6 +218,36 @@ class LogServiceLuceneImpl constructor(
                 subTag = subTag,
                 jobId = jobId,
                 executeCount = executeCount
+            )
+            success = logStatusSuccess(result.status)
+            return result
+        } finally {
+            logBeanV2.query(System.currentTimeMillis() - startEpoch, success)
+        }
+    }
+
+    override fun queryLogsBeforeLine(
+        buildId: String,
+        end: Long,
+        size: Int?,
+        tag: String?,
+        subTag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): QueryLogs {
+        val startEpoch = System.currentTimeMillis()
+        var success = false
+        try {
+            val index = indexService.getIndexName(buildId)
+            val result = doQueryLogsBeforeLine(
+                buildId = buildId,
+                index = index,
+                before = end,
+                tag = tag,
+                subTag = subTag,
+                jobId = jobId,
+                executeCount = executeCount,
+                size = size ?: Constants.NORMAL_MAX_LINES
             )
             success = logStatusSuccess(result.status)
             return result
@@ -249,7 +280,7 @@ class LogServiceLuceneImpl constructor(
             .build()
     }
 
-    override fun getEndLogs(
+    override fun getEndLogsPage(
         pipelineId: String,
         buildId: String,
         tag: String?,
@@ -258,9 +289,11 @@ class LogServiceLuceneImpl constructor(
         executeCount: Int?,
         size: Int
     ): EndPageQueryLogs {
+        val startEpoch = System.currentTimeMillis()
         val queryLogs = EndPageQueryLogs(buildId)
+        var success = false
         try {
-            return doGetEndLogs(
+            val result = doGetEndLogs(
                 buildId = buildId,
                 tag = tag,
                 subTag = subTag,
@@ -268,9 +301,49 @@ class LogServiceLuceneImpl constructor(
                 executeCount = executeCount,
                 size = size
             )
+            success = logStatusSuccess(result.status)
+            queryLogs.startLineNo = result.logs.lastOrNull()?.lineNo ?: 0
+            queryLogs.endLineNo = result.logs.firstOrNull()?.lineNo ?: 0
+            queryLogs.logs = result.logs
+            queryLogs.timeUsed = System.currentTimeMillis() - startEpoch
         } catch (e: Exception) {
             logger.error("Query end logs failed because of ${e.javaClass}. buildId: $buildId", e)
             queryLogs.status = LogStatus.FAIL
+        } finally {
+            logBeanV2.query(System.currentTimeMillis() - startEpoch, success)
+        }
+        return queryLogs
+    }
+
+    override fun getBottomLogs(
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        subTag: String?,
+        jobId: String?,
+        executeCount: Int?,
+        size: Int?
+    ): QueryLogs {
+        val startEpoch = System.currentTimeMillis()
+        val queryLogs = QueryLogs(buildId, true)
+        var success = false
+        try {
+            val result = doGetEndLogs(
+                buildId = buildId,
+                tag = tag,
+                subTag = subTag,
+                jobId = jobId,
+                executeCount = executeCount,
+                size = size ?: Constants.NORMAL_MAX_LINES
+            )
+            success = logStatusSuccess(result.status)
+            queryLogs.logs = result.logs
+            queryLogs.timeUsed = System.currentTimeMillis() - startEpoch
+        } catch (e: Exception) {
+            logger.error("Query bottom logs failed because of ${e.javaClass}. buildId: $buildId", e)
+            queryLogs.status = LogStatus.FAIL
+        } finally {
+            logBeanV2.query(System.currentTimeMillis() - startEpoch, success)
         }
         return queryLogs
     }
@@ -330,7 +403,8 @@ class LogServiceLuceneImpl constructor(
         return true
     }
 
-    private fun logStatusSuccess(logStatus: LogStatus) = (logStatus == LogStatus.EMPTY || logStatus == LogStatus.SUCCEED)
+    private fun logStatusSuccess(logStatus: LogStatus) =
+        (logStatus == LogStatus.EMPTY || logStatus == LogStatus.SUCCEED)
 
     private fun queryInitLogsPage(
         buildId: String,
@@ -376,9 +450,23 @@ class LogServiceLuceneImpl constructor(
         jobId: String?,
         executeCount: Int?,
         size: Int
-    ): EndPageQueryLogs {
-        val beginTime = System.currentTimeMillis()
-        val count = luceneClient.fetchLogsCount(
+    ): QueryLogs {
+        logger.info("[$buildId|$tag|$subTag|$jobId|$executeCount] doGetEndLogs")
+        val logStatus = if (tag == null && jobId != null) getLogStatus(
+            buildId = buildId,
+            tag = jobId,
+            subTag = null,
+            jobId = null,
+            executeCount = executeCount
+        ) else getLogStatus(
+            buildId = buildId,
+            tag = tag,
+            subTag = subTag,
+            jobId = jobId,
+            executeCount = executeCount
+        )
+        val queryLogs = QueryLogs(buildId, logStatus)
+        val logSize = luceneClient.fetchLogsCount(
             buildId = buildId,
             tag = tag,
             subTag = subTag,
@@ -391,15 +479,11 @@ class LogServiceLuceneImpl constructor(
             subTag = subTag,
             jobId = jobId,
             executeCount = executeCount,
-            start = (count - size).toLong()
+            start = (logSize - size).toLong()
         )
-        return EndPageQueryLogs(
-            buildId = buildId,
-            startLineNo = logs.lastOrNull()?.lineNo ?: 0,
-            endLineNo = logs.firstOrNull()?.lineNo ?: 0,
-            logs = logs,
-            timeUsed = System.currentTimeMillis() - beginTime
-        )
+        queryLogs.logs = logs
+        queryLogs.hasMore = logSize > queryLogs.logs.size
+        return queryLogs
     }
 
     private fun doQueryInitLogs(
@@ -457,7 +541,7 @@ class LogServiceLuceneImpl constructor(
         return queryLogs
     }
 
-    private fun doQueryLargeLogsAfterLine(
+    private fun doQueryLogsAfterLine(
         buildId: String,
         index: String,
         start: Long,
@@ -466,7 +550,7 @@ class LogServiceLuceneImpl constructor(
         jobId: String?,
         executeCount: Int?
     ): QueryLogs {
-        logger.info("[$index|$buildId|$tag|$subTag|$jobId|$executeCount] doQueryLargeInitLogs")
+        logger.info("[$index|$buildId|$tag|$subTag|$jobId|$executeCount] doQueryLogsAfterLine")
         val logStatus = if (tag == null && jobId != null) {
             getLogStatus(
                 buildId = buildId,
@@ -497,12 +581,12 @@ class LogServiceLuceneImpl constructor(
                 jobId = jobId,
                 executeCount = executeCount,
                 start = start,
-                size = Constants.MAX_LINES * Constants.SCROLL_MAX_TIMES
+                size = Constants.SCROLL_MAX_LINES * Constants.SCROLL_MAX_TIMES
             )
 
             logger.info("logs query time cost: ${System.currentTimeMillis() - startTime}")
             moreLogs.logs.addAll(logs)
-            moreLogs.hasMore = moreLogs.logs.size >= Constants.MAX_LINES * Constants.SCROLL_MAX_TIMES
+            moreLogs.hasMore = moreLogs.logs.size >= Constants.SCROLL_MAX_LINES * Constants.SCROLL_MAX_TIMES
         } catch (e: Exception) {
             logger.error("Query after logs failed because of ${e.javaClass}. buildId: $buildId", e)
             moreLogs.status = LogStatus.FAIL
@@ -510,6 +594,69 @@ class LogServiceLuceneImpl constructor(
             moreLogs.hasMore = false
         }
         return moreLogs
+    }
+
+    private fun doQueryLogsBeforeLine(
+        buildId: String,
+        index: String,
+        before: Long,
+        size: Int,
+        tag: String?,
+        subTag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): QueryLogs {
+        logger.info("[$index|$buildId|$tag|$subTag|$jobId|$executeCount] doQueryLogsBeforeLine")
+        val logStatus = if (tag == null && jobId != null) {
+            getLogStatus(
+                buildId = buildId,
+                tag = jobId,
+                subTag = null,
+                jobId = null,
+                executeCount = executeCount
+            )
+        } else {
+            getLogStatus(
+                buildId = buildId,
+                tag = tag,
+                subTag = subTag,
+                jobId = jobId,
+                executeCount = executeCount
+            )
+        }
+
+        val subTags = if (tag.isNullOrBlank()) null else logTagService.getSubTags(buildId, tag!!)
+        val queryLogs = QueryLogs(buildId = buildId, finished = logStatus, subTags = subTags)
+
+        try {
+            val startTime = System.currentTimeMillis()
+            val logSize = luceneClient.fetchLogsCount(
+                buildId = buildId,
+                tag = tag,
+                subTag = subTag,
+                jobId = jobId,
+                executeCount = executeCount
+            )
+            val logs = luceneClient.fetchLogs(
+                buildId = buildId,
+                tag = tag,
+                subTag = subTag,
+                jobId = jobId,
+                executeCount = executeCount,
+                before = before,
+                size = size
+            )
+
+            logger.info("logs query time cost: ${System.currentTimeMillis() - startTime}")
+            queryLogs.logs.addAll(logs)
+            queryLogs.hasMore = queryLogs.logs.size >= logSize
+        } catch (e: Exception) {
+            logger.error("Query before logs failed because of ${e.javaClass}. buildId: $buildId", e)
+            queryLogs.status = LogStatus.FAIL
+            queryLogs.finished = true
+            queryLogs.hasMore = false
+        }
+        return queryLogs
     }
 
     private fun getLogStatus(
@@ -574,7 +721,7 @@ class LogServiceLuceneImpl constructor(
         }
     }
 
-    private fun startLog(buildId: String): Boolean {
+    private fun prepareIndex(buildId: String): Boolean {
         val index = indexService.getIndexName(buildId)
         indexCache.put(index, true)
         return true

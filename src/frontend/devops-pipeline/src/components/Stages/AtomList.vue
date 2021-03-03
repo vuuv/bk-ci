@@ -16,15 +16,15 @@
                                                                               'is-intercept': atom.isQualityCheck,
                                                                               'template-compare-atom': atom.templateModify }"
                     v-if="atom['@type'] !== 'qualityGateInTask' && atom['@type'] !== 'qualityGateOutTask'">
-                    <status-icon v-if="atom.status && atom.status !== 'SKIP'" type="element" :status="atom.status" />
+                    <status-icon v-if="atom.status && atom.status !== 'SKIP'" type="element" :status="atom.status" :is-hook="((atom.additionalOptions || {}).elementPostInfo || false)" />
                     <status-icon v-else-if="isWaiting && atom.status !== 'SKIP'" type="element" status="WAITING" />
-                    <img v-else-if="atomMap[atom.atomCode] && atomMap[atom.atomCode].icon" :src="atomMap[atom.atomCode].icon" :class="{ 'atom-icon': true, 'skip-icon': useSkipStyle(atom) }" />
-                    <logo v-else :class="{ 'atom-icon': true, 'skip-icon': useSkipStyle(atom) }" :name="getAtomIcon(atom.atomCode)" size="18" />
+                    <img v-else-if="atomMap[atom.atomCode] && atomMap[atom.atomCode].icon && !(atom.additionalOptions || {}).elementPostInfo" :src="atomMap[atom.atomCode].icon" :class="{ 'atom-icon': true, 'skip-icon': useSkipStyle(atom) }" />
+                    <logo v-else :class="{ 'atom-icon': true, 'skip-icon': useSkipStyle(atom) }" :name="getAtomIcon(atom)" size="18" />
                     <p class="atom-name">
                         <span :title="atom.name" :class="{ 'skip-name': useSkipStyle(atom) }">{{ atom.atomCode ? atom.name : $t('editPage.pendingAtom') }}</span>
                     </p>
                     <bk-popover placement="top" v-if="atom.isReviewing">
-                        <span @click.stop="checkAtom(atom)" :class="isCurrentUser(atom.computedReviewers) ? 'atom-reviewing-tips' : 'atom-review-diasbled-tips'">{{ $t('editPage.toCheck') }}</span>
+                        <span @click.stop="checkAtom(atom, index)" :class="isCurrentUser(atom.computedReviewers) ? 'atom-reviewing-tips' : 'atom-review-diasbled-tips'">{{ $t('editPage.toCheck') }}</span>
                         <template slot="content">
                             <p>{{ $t('editPage.checkUser') }}{{ atom.computedReviewers.join(';') }}</p>
                         </template>
@@ -80,7 +80,7 @@
                 <span v-if="atomList.length === 0">{{ $t('editPage.addAtom') }}</span>
             </span>
         </draggable>
-        <check-atom-dialog :is-show-check-dialog="isShowCheckDialog" :atom="currentAtom" :toggle-check="toggleCheckDialog"></check-atom-dialog>
+        <check-atom-dialog :is-show-check-dialog="isShowCheckDialog" :atom="currentAtom" :toggle-check="toggleCheckDialog" :element="element"></check-atom-dialog>
     </section>
 </template>
 
@@ -159,7 +159,7 @@
                     atoms.forEach(atom => {
                         if (this.curMatchRules.some(rule => rule.taskId === atom.atomCode
                             && (rule.ruleList.every(val => !val.gatewayId)
-                            || rule.ruleList.some(val => atom.name.indexOf(val.gatewayId) > -1)))) {
+                                || rule.ruleList.some(val => atom.name.indexOf(val.gatewayId) > -1)))) {
                             atom.isQualityCheck = true
                         } else {
                             atom.isQualityCheck = false
@@ -256,8 +256,9 @@
                     this.currentAtom = {}
                 }
             },
-            checkAtom (atom) {
+            checkAtom (atom, elementIndex) {
                 if (!this.isCurrentUser(atom.computedReviewers)) return
+                this.element = this.container.elements[elementIndex]
                 this.currentAtom = atom
                 this.toggleCheckDialog(true)
             },
@@ -284,7 +285,13 @@
                     return false
                 }
             },
-            getAtomIcon (atomCode) {
+            getAtomIcon (atom) {
+                const additionalOptions = atom.additionalOptions || {}
+                const elementPostInfo = additionalOptions.elementPostInfo
+                if (elementPostInfo) {
+                    return 'icon-build-hooks'
+                }
+                const atomCode = atom.atomCode
                 if (!atomCode) {
                     return 'placeholder'
                 }
