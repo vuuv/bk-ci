@@ -50,7 +50,7 @@ check_cmd (){
 }
 
 ci_curl (){
-  curl -k -s -f -H "X-DEVOPS-BUILD-TYPE: DOCKER" \
+  curl -k -s -f -L -H "X-DEVOPS-BUILD-TYPE: DOCKER" \
     -H "X-DEVOPS-PROJECT-ID: ${devops_project_id}" \
     -H "X-DEVOPS-AGENT-ID: ${devops_agent_id}" \
     -H "X-DEVOPS-AGENT-SECRET-KEY: ${devops_agent_secret_key}" \
